@@ -1,75 +1,136 @@
-# Autonomous Indoor Service Robot (ROS2)
+# Autonomous Indoor Service Robot
 
-## Overview
+[![ROS 2](https://img.shields.io/badge/ROS_2-Humble-22314E?logo=ros)](https://docs.ros.org/en/humble/)
+[![Gazebo](https://img.shields.io/badge/Gazebo-Classic-orange)](https://classic.gazebosim.org/)
+[![Platform](https://img.shields.io/badge/Platform-TurtleBot3_Burger-00A3E0)](https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/)
+[![Status](https://img.shields.io/badge/Status-In_Progress-F5A623)](#development-status)
 
-This project is a portfolio-focused autonomous robotics system built using **ROS2 Humble** and **Gazebo**. The long-term goal is to develop an autonomous indoor service robot capable of mapping unknown environments, localizing itself, planning safe paths, and completing multi-goal missions in custom environments.
+A ROS 2 mobile-robot simulation for LiDAR mapping, localization, and autonomous navigation in a custom multi-room office environment.
 
-The project is being developed incrementally to gain experience with modern robotics software while creating a portfolio piece relevant to robotics software engineering, autonomous systems, and perception roles.
+> **Current milestone:** A TurtleBot3 Burger can map the simulated environment with SLAM Toolbox, localize against a saved occupancy map with AMCL, and execute point-to-point navigation goals through Nav2.
 
----
+## Why this project
 
-## Current Features
+Reliable indoor autonomy requires several robotics subsystems to work together: simulation, sensing, coordinate transforms, mapping, localization, planning, and control. This project integrates those components into a reproducible ROS 2 workflow and provides a foundation for multi-stop service missions and navigation benchmarking.
 
-* ROS2 Humble development environment
-* TurtleBot3 simulation in Gazebo
-* Keyboard teleoperation
-* LiDAR-based SLAM using SLAM Toolbox
-* Occupancy grid map generation
-* Map saving
-* AMCL localization
-* Nav2 autonomous navigation
-* Goal-based path planning
+## Implemented capabilities
 
----
+| Area | Implementation |
+| --- | --- |
+| Simulation | TurtleBot3 Burger in Gazebo Classic with a custom multi-room office world |
+| Mapping | 2D LiDAR occupancy-grid mapping with SLAM Toolbox and persistent map export |
+| Localization | AMCL localization against the saved map |
+| Navigation | Nav2 point-to-point planning and closed-loop motion control |
+| Teleoperation | Custom responsive WASD ROS 2 node with key-release stopping and an emergency stop |
+| Environment | Versioned Gazebo worlds plus a Dockerfile for a ROS 2 Humble toolchain |
 
-## Technologies
+## Current result
 
-* ROS2 Humble
-* Gazebo
-* TurtleBot3
-* SLAM Toolbox
-* Nav2
-* AMCL
-* RViz2
-* Ubuntu 22.04
+The repository includes the occupancy map produced during an initial simulation SLAM run. Black cells are occupied, white cells are free space, and gray cells are unknown.
 
----
+![Saved 2D occupancy map](docs/assets/occupancy_map.png)
 
-## Roadmap
+The custom office world is committed separately. Mapping that world again and recording the complete Gazebo/RViz workflow are the next presentation milestones.
 
-### Phase 1 (Completed)
+## System architecture
 
-* [x] Install and configure ROS2
-* [x] Launch TurtleBot3 simulation
-* [x] Implement teleoperation
-* [x] Perform SLAM mapping
-* [x] Save occupancy grid maps
-* [x] Configure localization (AMCL)
-* [x] Implement autonomous navigation
+```mermaid
+flowchart TD
+    A["WASD teleoperation"] --> B["TurtleBot3 in Gazebo"]
+    B --> C["LiDAR and odometry"]
+    C --> D["SLAM Toolbox"]
+    D --> E["Saved occupancy map"]
+    E --> F["AMCL localization"]
+    F --> G["Nav2 planning and control"]
+    G --> B
+```
 
-### Phase 2 (In Progress)
+## Quick start
 
-* [ ] Create custom indoor environment
-* [ ] Improve navigation robustness
-* [ ] Add multi-waypoint missions
-* [ ] Evaluate navigation performance
+The primary environment is Ubuntu 22.04 with ROS 2 Humble and Gazebo Classic. See [the complete setup guide](docs/setup.md) for package installation, mapping, map saving, Nav2, Docker, and troubleshooting.
 
-### Phase 3 (Planned)
+```bash
+git clone https://github.com/anuj519/autonomous-indoor-service-robot.git
+cd autonomous-indoor-service-robot
 
-* [ ] Autonomous task execution
-* [ ] Dynamic obstacle avoidance
-* [ ] Behavior tree mission planning
-* [ ] Object detection integration
-* [ ] Raspberry Pi deployment (optional)
+source /opt/ros/humble/setup.bash
+export TURTLEBOT3_MODEL=burger
 
----
+gazebo --verbose worlds/office_fasttrack.world \
+  -s libgazebo_ros_init.so \
+  -s libgazebo_ros_factory.so
+```
 
-## Motivation
+In a second sourced terminal, spawn the robot:
 
-This project is intended to demonstrate practical experience integrating perception, localization, mapping, and autonomous navigation into a complete robotics software system while following engineering practices such as documentation, version control, and iterative development.
+```bash
+ros2 run gazebo_ros spawn_entity.py \
+  -entity burger \
+  -database turtlebot3_burger \
+  -x 0 -y 0 -z 0.01
+```
 
----
+For responsive manual driving, open another sourced terminal:
 
-## Status
+```bash
+python3 scripts/wasd_teleop.py
+```
 
-Current milestone: **Autonomous navigation in simulation using ROS2, SLAM Toolbox, AMCL, and Nav2.**
+| Key | Command |
+| --- | --- |
+| `W` / `S` | Forward / reverse |
+| `A` / `D` | Turn left / right |
+| `Q` / `E` | Forward-left / forward-right |
+| `Space` | Stop immediately |
+| `X` | Stop and exit |
+
+## Repository guide
+
+| Path | Purpose |
+| --- | --- |
+| `worlds/office_fasttrack.world` | Primary custom multi-room Gazebo environment |
+| `worlds/office_v1.world` | Earlier baseline world retained for comparison |
+| `maps/my_map.yaml` and `maps/my_map.pgm` | Saved SLAM occupancy map and metadata |
+| `scripts/wasd_teleop.py` | Responsive ROS 2 keyboard teleoperation node |
+| `docker/Dockerfile` | ROS 2 Humble simulation and navigation dependencies |
+| `docs/setup.md` | Full setup and operating workflow |
+| `docs/progress.md` | Completed milestones, limitations, and planned work |
+
+## Development status
+
+This is an active project. Completed functionality and planned work are separated below so the current scope is clear.
+
+### Completed
+
+- [x] Configure ROS 2 Humble, Gazebo Classic, and TurtleBot3 Burger
+- [x] Build a custom multi-room office world
+- [x] Implement responsive WASD teleoperation
+- [x] Generate and save a 2D LiDAR occupancy map with SLAM Toolbox
+- [x] Localize the robot with AMCL
+- [x] Execute point-to-point navigation goals with Nav2
+
+### In progress
+
+- [ ] Package repeatable launch workflows
+- [ ] Implement a multi-waypoint service-mission node
+- [ ] Test blocked-path behavior and navigation recovery
+- [ ] Measure success rate, completion time, and path length across repeated trials
+- [ ] Record an end-to-end Gazebo/RViz demonstration
+
+### Future extensions
+
+- [ ] Behavior-tree mission logic and failure handling
+- [ ] Object-detection integration
+- [ ] Optional Raspberry Pi and physical-sensor deployment
+
+Detailed milestone notes are available in [docs/progress.md](docs/progress.md).
+
+## Scope and limitations
+
+- The current implementation is simulation-only.
+- SLAM Toolbox, AMCL, and Nav2 are integrated ROS 2 packages; this project does not claim to implement those algorithms from scratch.
+- Multi-goal missions, dynamic-obstacle experiments, recovery evaluation, and quantitative benchmarking are not yet complete.
+
+## Author
+
+Built by [Anuj Arora](https://github.com/anuj519) as an independent robotics portfolio project.
